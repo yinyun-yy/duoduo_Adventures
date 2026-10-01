@@ -146,18 +146,18 @@ if (new URLSearchParams(location.search).has('test')) {
     }
   }, 3100);
   setTimeout(() => {
-    game.gameover('time');
+    game.levelComplete(1);
     const info = document.getElementById('bootinfo');
     if (info) {
       info.textContent =
         'TEST2 state=' +
         game.state +
-        ' goShown=' +
-        !document.getElementById('gameover').classList.contains('hidden') +
-        ' goTitle=' +
-        document.getElementById('go-title').textContent +
+        ' lcShown=' +
+        !document.getElementById('levelcomplete').classList.contains('hidden') +
+        ' lcTitle=' +
+        document.getElementById('lc-title').textContent +
         ' bestExp=' +
-        JSON.parse(localStorage.getItem('nf_best_exp')) +
+        JSON.parse(localStorage.getItem('dd_best_exp')) +
         ' ok';
     }
   }, 3600);

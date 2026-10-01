@@ -40,32 +40,33 @@ await send('Page.navigate', { url: URL });
 await sleep(1800);
 
 async function evaljs(expression) {
-  const r = await send('Runtime.evaluate', { expression, returnByValue: true });
+  const r = await send('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true });
   if (r.result && r.result.exceptionDetails) return 'EVAL_ERR ' + r.result.exceptionDetails.text;
   return r.result ? r.result.result.value : undefined;
 }
 
 const snap = () =>
   evaljs(
-    `JSON.stringify({boot:document.body.dataset.booted, state:window.__game.state, level:window.__game.player.level, totalExp:window.__game.player.stats.totalExp, eaten:window.__game.player.stats.eaten, alive:window.__game.targetsAlive(), hp:window.__game.player.hp, hudLevel:document.getElementById('hud-level').textContent, hudExp:document.getElementById('hud-exp').textContent, hudTimer:document.getElementById('hud-timer').textContent})`
+    `JSON.stringify({boot:document.body.dataset.booted, state:window.__game.state, level:window.__game.level, theme:window.__game.world.theme, playerLevel:window.__game.player.level, hp:window.__game.player.hp, alive:window.__game.targetsAlive(), quest:JSON.stringify(window.__game.quest), gateOpen:window.__game.gateOpen})`
   );
 
 console.log('BOOT      ', await snap());
-console.log('click start');
+console.log('click start L1');
 await evaljs(`document.getElementById('btn-start').click()`);
-await sleep(2500);
+await sleep(2200);
 console.log('PLAYING   ', await snap());
+console.log('L1 title  ', await evaljs(`document.getElementById('lt-main').textContent + ' / ' + document.getElementById('lt-sub').textContent`));
 
-console.log('simulate eats (teleport onto 10 victims)');
+console.log('simulate eats');
 await evaljs(
-  `(async () => { for (let i=0;i<10;i++){ const t=window.__game.targets.find(x=>x.alive); if(!t) break; const p=window.__game.player; p.x=t.x; p.y=t.y; p.visualR=Math.max(p.visualR, t.r*1.2); await new Promise(r=>setTimeout(r,150)); } })()`
+  `(async () => { for (let i=0;i<10;i++){ const t=window.__game.targets.find(x=>x.alive&&!x.type.hostile&&!x.type.collectible); if(!t) break; const p=window.__game.player; p.x=t.x; p.y=t.y; p.visualR=Math.max(p.visualR, t.r*1.2); await new Promise(r=>setTimeout(r,150)); } })()`
 );
-await sleep(2500);
+await sleep(2200);
 console.log('AFTER EAT ', await snap());
 
 console.log('level up test');
-await evaljs(`window.__game.debugGain(4000); window.__game.debugGain(30000);`);
-await sleep(1500);
+await evaljs(`window.__game.debugGain(4000);`);
+await sleep(1200);
 console.log('AFTER LVL ', await snap());
 
 if (SHOT) {
@@ -74,85 +75,77 @@ if (SHOT) {
   console.log('screenshot saved:', SHOT);
 }
 
-console.log('pause');
-await evaljs(`document.getElementById('btn-pause').click()`);
-await sleep(600);
-console.log('PAUSED    ', await snap());
-await evaljs(`document.getElementById('btn-resume').click()`);
-await sleep(600);
-console.log('RESUMED   ', await evaljs('window.__game.state'));
-
-console.log('gameover time test');
-await evaljs(`window.__game.gameover('time')`);
-await sleep(600);
+console.log('L1 complete (timer end)');
+await evaljs(`window.__game.timer = 0.01`);
+await sleep(700);
 console.log(
-  'GAMEOVER  ',
+  'L1 CLEAR  ',
   await evaljs(
-    `JSON.stringify({state:window.__game.state, shown:!document.getElementById('gameover').classList.contains('hidden'), title:document.getElementById('go-title').textContent, continueVisible:!document.getElementById('btn-continue').classList.contains('hidden'), bestExp:JSON.parse(localStorage.getItem('nf_best_exp'))})`
+    `JSON.stringify({state:window.__game.state, shown:!document.getElementById('levelcomplete').classList.contains('hidden'), title:document.getElementById('lc-title').textContent, nextVisible:!document.getElementById('btn-lc-next').classList.contains('hidden')})`
   )
 );
 
-console.log('continue endless');
-await evaljs(`document.getElementById('btn-continue').click()`);
-await sleep(600);
+console.log('enter L2');
+await evaljs(`document.getElementById('btn-lc-next').click()`);
+await sleep(2200);
 console.log(
-  'ENDLESS   ',
-  await evaljs(`JSON.stringify({state:window.__game.state, endless:window.__game.endless, timer:document.getElementById('hud-timer').textContent})`)
+  'L2 PLAY   ',
+  await evaljs(
+    `JSON.stringify({state:window.__game.state, theme:window.__game.world.theme, slimes:window.__game.targets.filter(t=>t.alive&&t.type.hostile).length, coins:window.__game.targets.filter(t=>t.alive&&t.type.collectible).length, title:document.getElementById('lt-sub').textContent, questHidden:document.getElementById('hud-quest').classList.contains('hidden'), timer:document.getElementById('hud-timer').textContent})`
+  )
 );
 
-console.log('menu return + records');
-await evaljs(`window.__game.gameover('time')`);
+console.log('grow + defeat slimes');
+await evaljs(`window.__game.debugGain(1500)`);
+await sleep(800);
+for (let i = 0; i < 8; i++) {
+  await evaljs(
+    `(async()=>{ const s=window.__game.targets.find(t=>t.alive&&t.type.hostile); if(!s) return; const p=window.__game.player; p.hp=100; p.invulnT=9; p.x=s.x; p.y=s.y; await new Promise(r=>setTimeout(r,1500)); })()`
+  );
+  await sleep(1650);
+}
+console.log(
+  'FIGHT     ',
+  await evaljs(
+    `JSON.stringify({quest:window.__game.quest, gateOpen:window.__game.gateOpen, slimesLeft:window.__game.targets.filter(t=>t.alive&&t.type.hostile).length})`
+  )
+);
+
+console.log('reach gate');
+await evaljs(`(async()=>{ const p=window.__game.player; p.x=6840; p.y=1400; window.__game.camera.snapTo(p.x,p.y); await new Promise(r=>setTimeout(r,400)); })()`);
+await sleep(1000);
+console.log(
+  'L2 CLEAR  ',
+  await evaljs(
+    `JSON.stringify({state:window.__game.state, shown:!document.getElementById('levelcomplete').classList.contains('hidden'), title:document.getElementById('lc-title').textContent, coins:document.getElementById('lc-coin').textContent, slimes:document.getElementById('lc-slime').textContent})`
+  )
+);
+
+console.log('back to menu, death flow L1');
+await evaljs(`document.getElementById('btn-lc-home').click()`);
 await sleep(400);
+await evaljs(`document.getElementById('btn-start').click()`);
+await sleep(800);
+await evaljs(
+  `(async()=>{ for(let i=0;i<8;i++){ window.__game.player.damageCd=0; window.__game.damage({r:999}); await new Promise(r=>setTimeout(r,120)); } })()`
+);
+await sleep(2600);
+console.log(
+  'L1 DEATH  ',
+  await evaljs(
+    `JSON.stringify({state:window.__game.state, shown:!document.getElementById('gameover').classList.contains('hidden'), title:document.getElementById('go-title').textContent})`
+  )
+);
 await evaljs(`document.getElementById('btn-home2').click()`);
 await sleep(400);
-console.log(
-  'MENU      ',
-  await evaljs(
-    `JSON.stringify({state:window.__game.state, menuShown:!document.getElementById('menu').classList.contains('hidden'), hudHidden:document.getElementById('hud').classList.contains('hidden'), best:document.getElementById('menu-best').textContent})`
-  )
-);
 
-console.log('laugh / hurt / dying states test');
-await evaljs(`window.__game.player.laugh(1.0)`);
-await sleep(300);
+console.log('mobile touch UI');
+await evaljs(`window.__game.input.isTouch=true; window.dispatchEvent(new Event('resize'));`);
+await sleep(500);
 console.log(
-  'LAUGH     ',
-  await evaljs(`JSON.stringify({state:window.__game.player.state, laughOpen:window.__game.player.laughOpen().toFixed(2), stillPlaying:window.__game.state})`)
-);
-await sleep(1300);
-await evaljs(`window.__game.player.hurt(0.6)`);
-await sleep(300);
-console.log('HURT      ', await evaljs(`window.__game.player.state`));
-await sleep(600);
-console.log('RECOVERED ', await evaljs(`window.__game.player.state`));
-
-console.log('death flow test (drain hp to 0)');
-await evaljs(`(async () => { for (let i=0;i<8;i++){ window.__game.player.damageCd = 0; window.__game.damage({ r: 999 }); await new Promise(r=>setTimeout(r,80)); } })()`);
-for (let i = 0; i < 5; i++) {
-  await sleep(400);
-  console.log('DYING     ', await evaljs(`JSON.stringify({state:window.__game.state, deadT:window.__game.player.deadT.toFixed(2), playerState:window.__game.player.state})`));
-}
-await sleep(1200);
-console.log(
-  'DEAD OVER ',
+  'MOBILE    ',
   await evaljs(
-    `JSON.stringify({state:window.__game.state, shown:!document.getElementById('gameover').classList.contains('hidden'), title:document.getElementById('go-title').textContent, continueHidden:document.getElementById('btn-continue').classList.contains('hidden')})`
-  )
-);
-
-console.log('new creatures check');
-console.log(
-  'CREATURES ',
-  await evaljs(
-    `JSON.stringify((() => { const counts={}; for(let i=0;i<300;i++){ const t=window.__game.pickTypeFor(3600+Math.random()*1200, 1700+Math.random()*800, 5); if(t) counts[t.id]=(counts[t.id]||0)+1; } return {shrimp:!!counts.shrimp, jellyfish:!!counts.jellyfish, crab:!!counts.crab, sample:Object.keys(counts).length}; })())`
-  )
-);
-await evaljs(`document.getElementById('btn-restart2').click()`);
-await sleep(600);
-console.log(
-  'RESTART   ',
-  await evaljs(
-    `JSON.stringify({state:window.__game.state, dead:window.__game.player.dead, level:window.__game.player.level, hp:window.__game.player.hp, title:document.title, menuH1:document.querySelector('.title').textContent})`
+    `JSON.stringify({joy:!document.getElementById('joy-zone').classList.contains('hidden'), boost:!document.getElementById('btn-boost').classList.contains('hidden')})`
   )
 );
 
