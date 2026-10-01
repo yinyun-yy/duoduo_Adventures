@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#ff8fc0">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="description" content="朵朵历险记 - 蹦蹦跳跳的小兔子朵朵，吃掉一切慢慢长大，闯过阳光草地与神秘森林！">
+<title>朵朵历险记 · 蹦蹦跳跳，吃吃长长</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐰</text></svg>">
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="app">
+<canvas id="game"></canvas>
+
+<div id="hud" class="hidden">
+  <div id="hud-left" class="glass">
+    <div class="lv-row">
+      <span class="lv-badge"><span class="frog-ico">🐰</span> Lv.<b id="hud-level">1</b></span>
+      <span id="hud-stage" class="stage-chip">小朵朵</span>
+    </div>
+    <div class="bar exp-bar"><div id="hud-exp-fill" class="fill exp-fill"></div></div>
+    <div class="bar-pct"><span id="hud-exp-pct">0%</span><span class="left-score">分数 <span id="hud-score2">0</span></span></div>
+    <div class="bar hp-bar"><span class="bar-ico">❤</span><div id="hud-hp-fill" class="fill hp-fill"></div></div>
+  </div>
+  <div id="hud-center">
+    <div id="hud-timer" class="glass">10:00</div>
+    <div id="hud-quest" class="glass hidden"><span id="hud-quest-slime">🟢 史莱姆 0/8</span><span class="quest-sep">·</span><span id="hud-quest-coin">🪙 金币 0</span></div>
+  </div>
+  <div id="hud-right">
+    <div class="glass hud-stats">
+      <div class="exp-label">成长值</div>
+      <div id="hud-exp" class="exp-value">0</div>
+      <div class="score-label">分数 <span id="hud-score">0</span></div>
+      <div class="bar energy-bar"><span class="bar-ico">⚡</span><div id="hud-energy-fill" class="fill energy-fill"></div></div>
+    </div>
+    <button id="btn-pause" class="icon-btn glass" aria-label="暂停">⏸</button>
+  </div>
+  <div id="hud-hint-pc" class="hint-pc">WASD / 方向键 移动 · SHIFT 加速 · 按住鼠标跟随 · ESC 暂停</div>
+</div>
+
+<div id="banner" class="hidden">
+  <div class="banner-main">LEVEL UP!</div>
+  <div class="banner-sub">朵朵长大啦！</div>
+</div>
+
+<div id="level-title" class="hidden">
+  <div class="lt-main" id="lt-main">第二关</div>
+  <div class="lt-sub" id="lt-sub">神秘森林</div>
+</div>
+
+<div id="menu" class="overlay">
+  <div class="menu-card glass-strong">
+    <div class="menu-frog" aria-hidden="true">🐰</div>
+    <h1 class="title">朵朵历险记</h1>
+    <p class="subtitle">蹦蹦跳跳，吃吃长长</p>
+    <div class="best-chip" id="menu-best">🏆 最高成长值 0 · 最高 Lv.1</div>
+    <div class="btn-col menu-levels">
+      <button class="btn btn-primary" id="btn-start">第一关 · 阳光草地</button>
+      <button class="btn btn-pink-ghost" id="btn-level2">第二关 · 神秘森林</button>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-ghost" id="btn-help">游戏说明</button>
+      <button class="btn btn-ghost" id="btn-settings">设置</button>
+    </div>
+    <p class="menu-hint" id="menu-hint">WASD / 方向键移动 · SHIFT 加速 · 手机自动横屏</p>
+  </div>
+</div>
+
+<div id="help" class="overlay hidden">
+  <div class="modal glass-strong">
+    <h2>游戏说明</h2>
+    <ul class="help-list">
+      <li>控制小兔子朵朵，见什么吃什么，慢慢长大！</li>
+      <li>第一关：在阳光草地自由成长 10 分钟，通关后进入神秘森林</li>
+      <li>第二关：夜里的神秘森林，有会追人的森林史莱姆</li>
+      <li>长得比史莱姆大就可以打败它，打败 8 只就能打开终点大门</li>
+      <li>收集金币，点亮检查点，一路蹦蹦跳跳到终点！</li>
+    </ul>
+    <div class="key-hints">
+      <div>⌨️ WASD / 方向键 · 移动</div>
+      <div>🐭 按住鼠标 · 向鼠标方向移动</div>
+      <div>⚡ SHIFT / 加速按钮 · 冲刺（消耗能量）</div>
+      <div>📱 手机 · 左下摇杆 + 右下加速</div>
+    </div>
+    <button class="btn btn-ghost" data-close="help">返回</button>
+  </div>
+</div>
+
+<div id="settings" class="overlay hidden">
+  <div class="modal glass-strong">
+    <h2>设置</h2>
+    <label class="toggle-row"><span>🎵 背景音乐</span><input type="checkbox" id="set-bgm"></label>
+    <label class="toggle-row"><span>🔊 音效</span><input type="checkbox" id="set-sfx"></label>
+    <div class="btn-col">
+      <button id="btn-fullscreen" class="btn btn-ghost">⛶ 全屏</button>
+      <button id="btn-reset" class="btn btn-danger">🗑 重置本地记录</button>
+      <button class="btn btn-ghost" data-close="settings">返回</button>
+    </div>
+  </div>
+</div>
+
+<div id="pause" class="overlay hidden">
+  <div class="modal glass-strong">
+    <h2>游戏暂停</h2>
+    <div class="btn-col">
+      <button id="btn-resume" class="btn btn-primary">继续</button>
+      <button id="btn-restart" class="btn btn-ghost">重新开始本关</button>
+      <button id="btn-home" class="btn btn-ghost">返回主页</button>
+    </div>
+  </div>
+</div>
+
+<div id="gameover" class="overlay hidden">
+  <div class="modal glass-strong">
+    <h2 id="go-title">朵朵被吃掉了！</h2>
+    <p id="go-sub" class="go-sub hidden">新纪录！🏆</p>
+    <div class="stats-grid">
+      <div class="stat"><b id="go-exp">0</b><span>本局成长值</span></div>
+      <div class="stat"><b id="go-score">0</b><span>本局分数</span></div>
+      <div class="stat"><b id="go-eaten">0</b><span>吞食数量</span></div>
+      <div class="stat"><b id="go-level">1</b><span>最高等级</span></div>
+      <div class="stat"><b id="go-size">24</b><span>最大体型</span></div>
+      <div class="stat"><b id="go-time">0:00</b><span>存活时间</span></div>
+    </div>
+    <div class="btn-col">
+      <button id="btn-restart2" class="btn btn-primary">重新开始本关</button>
+      <button id="btn-home2" class="btn btn-ghost">返回主页</button>
+    </div>
+  </div>
+</div>
+
+<div id="levelcomplete" class="overlay hidden">
+  <div class="modal glass-strong lc-modal">
+    <div class="lc-emoji" id="lc-emoji">🎉</div>
+    <h2 id="lc-title">第一关完成！</h2>
+    <p id="lc-sub" class="lc-sub">阳光草地通关啦！神秘森林在等你～</p>
+    <div class="stats-grid">
+      <div class="stat"><b id="lc-exp">0</b><span>本关成长值</span></div>
+      <div class="stat"><b id="lc-score">0</b><span>本关分数</span></div>
+      <div class="stat"><b id="lc-coin">0</b><span>金币</span></div>
+      <div class="stat"><b id="lc-slime">0</b><span>击败史莱姆</span></div>
+      <div class="stat"><b id="lc-eaten">0</b><span>吞食数量</span></div>
+      <div class="stat"><b id="lc-time">0:00</b><span>用时</span></div>
+    </div>
+    <div class="btn-col" id="lc-buttons">
+      <button id="btn-lc-next" class="btn btn-primary">进入第二关</button>
+      <button id="btn-continue" class="btn btn-ghost">继续游戏（无尽模式）</button>
+      <button id="btn-lc-restart" class="btn btn-ghost">重新开始本关</button>
+      <button id="btn-lc-home" class="btn btn-ghost">返回主页</button>
+    </div>
+  </div>
+</div>
+
+<div id="joy-zone" class="hidden">
+  <div id="joy-base"></div>
+  <div id="joy-knob"></div>
+</div>
+<button id="btn-boost" class="hidden" aria-label="加速">⚡</button>
+
+<div id="bootinfo"></div>
+</div>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
